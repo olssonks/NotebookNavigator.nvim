@@ -107,7 +107,7 @@ end
 ---
 ---@param repl_args table|nil Optional config for the repl.
 M.run_all_cells = function(repl_args)
-  core.run_all_cells(M.config.repl_provider, repl_args)
+  core.run_all_cells(M.config.repl_provider, repl_args, cell_marker())
 end
 
 --- Run all cells below (including current cell)

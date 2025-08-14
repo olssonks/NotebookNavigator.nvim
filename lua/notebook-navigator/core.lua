@@ -121,11 +121,11 @@ M.run_and_move = function(cell_marker, repl_provider, repl_args)
   end
 end
 
-M.run_all_cells = function(repl_provider, repl_args)
+M.run_all_cells = function(repl_provider, repl_args, cell_marker)
   local buf_length = vim.api.nvim_buf_line_count(0)
 
   local repl = get_repl(repl_provider)
-  repl(1, buf_length, repl_args)
+  repl(1, buf_length, repl_args, cell_marker)
 end
 
 M.run_cells_below = function(cell_marker, repl_provider, repl_args)

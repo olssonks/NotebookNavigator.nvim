@@ -82,11 +82,11 @@ local function get_cells_to_run(direction, buf_nr)
   return cells_to_run
 end
 
-local buf_nr = 10
-local lines = get_start_lines(buf_nr)
-local starts = get_all_cells(lines)
-
-local cells = get_cells_to_run("all", buf_nr)
+-- local buf_nr = 0
+-- local lines = get_start_lines(buf_nr)
+-- local starts = get_all_cells(lines)
+--
+-- local cells = get_cells_to_run("all", buf_nr)
 
 local M = {}
 
@@ -209,7 +209,7 @@ end
 
 M.run_all_cells = function(repl_provider, repl_args, cell_marker)
   local repl = get_repl(repl_provider)
-  local buf_nr = 10
+  local buf_nr = 0
   local cells_to_run = get_cells_to_run("all", buf_nr)
   for _, cell in ipairs(cells_to_run) do
     repl(cell.range.from[1], cell.range.to[1], repl_args, cell_marker)

@@ -2,6 +2,86 @@ local commenter = require "notebook-navigator.commenters"
 local get_repl = require "notebook-navigator.repls"
 local miniai_spec = require("notebook-navigator.miniai_spec").miniai_spec
 
+local ts = vim.treesitter
+
+local tsquery = [[
+(
+    (comment) @cmt (#eq? @cmt "# %%") (#offset! @cmt)
+)
+	]]
+
+local query = ts.query.parse("python", tsquery)
+
+local function overlaps_range(range, other)
+  return range.from[1] <= other.to[1] and other.from[1] <= range.to[1]
+end
+
+local function get_start_lines(bufnr)
+  local parser = ts.get_parser(bufnr, "python")
+  local tree = parser:parse()
+  local root = tree[1]:root()
+
+  local line_starts = { 0 }
+
+  for _, captures, metadata in query:iter_matches(root, bufnr) do
+    local line_num = metadata[1].range[1]
+    table.insert(line_starts, line_num)
+  end
+
+  table.insert(line_starts, vim.api.nvim_buf_line_count(bufnr))
+
+  return line_starts
+end
+
+local function get_all_cells(cell_starts)
+  local column = 0
+  local num_starts = #cell_starts
+  local cell_ranges = {}
+  for i = 1, num_starts - 1, 1 do
+    cell_ranges[i] = {
+      range = { from = { cell_starts[i], column }, to = { cell_starts[i + 1], column } },
+    }
+  end
+  return cell_ranges
+end
+
+local function get_range(direction)
+  local cursor_pos = vim.api.nvim_win_get_cursor(0)
+  local cursor_row = cursor_pos[1]
+  local lastline = vim.api.nvim_buf_line_count(0)
+  local range = {}
+  if direction == "above" then
+    range = { from = { 1, 0 }, to = { cursor_row, 0 } }
+  elseif direction == "below" then
+    range = { from = { cursor_row, 0 }, to = { lastline, 0 } }
+  elseif direction == "all" then
+    range = { from = { 1, 0 }, to = { lastline, 0 } }
+  end
+  return range
+end
+
+local function get_cells_to_run(direction, buf_nr)
+  local start_lines = get_start_lines(buf_nr)
+  local cells = get_all_cells(start_lines)
+  local run_range = get_range(direction)
+  local cells_to_run = {}
+  for _, cell in ipairs(cells) do
+    if overlaps_range(run_range, cell.range) then
+      table.insert(cells_to_run, cell)
+    end
+  end
+  return cells_to_run
+end
+
+local function look_at(this)
+  vim.notify(vim.inspect(this))
+end
+local buf_nr = 10
+local lines = get_start_lines(buf_nr)
+local starts = get_all_cells(lines)
+
+look_at(get_cells_to_run("above", 10))
+
 local M = {}
 
 M.move_cell = function(dir, cell_marker)
@@ -122,18 +202,28 @@ M.run_and_move = function(cell_marker, repl_provider, repl_args)
 end
 
 M.run_all_cells = function(repl_provider, repl_args, cell_marker)
-  local buf_length = vim.api.nvim_buf_line_count(0)
-
   local repl = get_repl(repl_provider)
-  repl(1, buf_length, repl_args, cell_marker)
+  local buf_nr = 0
+  local cells_to_run = get_cells_to_run("all", buf_nr)
+  for _, cell in ipairs(cells_to_run) do
+    repl(cell.range.from, cell.range.to, repl_args, cell_marker)
+  end
 end
 
 M.run_cells_below = function(cell_marker, repl_provider, repl_args)
-  local buf_length = vim.api.nvim_buf_line_count(0)
-  local cell_object = miniai_spec("i", cell_marker)
-
   local repl = get_repl(repl_provider)
-  repl(cell_object.from.line, buf_length, repl_args)
+  local cells_to_run = get_cells_to_run("below", buf_nr)
+  for _, cell in ipairs(cells_to_run) do
+    repl(cell.range.from, cell.range.to, repl_args, cell_marker)
+  end
+end
+
+M.run_cells_above = function(cell_marker, repl_provider, repl_args)
+  local repl = get_repl(repl_provider)
+  local cells_to_run = get_cells_to_run("above", buf_nr)
+  for _, cell in ipairs(cells_to_run) do
+    repl(cell.range.from, cell.range.to, repl_args, cell_marker)
+  end
 end
 
 M.merge_cell = function(dir, cell_marker)

@@ -16,12 +16,16 @@ local function overlaps_range(range, other)
   return range.from[1] <= other.to[1] and other.from[1] <= range.to[1]
 end
 
+local function look_at(this)
+  vim.notify(vim.inspect(this))
+end
+
 local function get_start_lines(bufnr)
   local parser = ts.get_parser(bufnr, "python")
   local tree = parser:parse()
   local root = tree[1]:root()
 
-  local line_starts = { 0 }
+  local line_starts = { 1 }
 
   for _, captures, metadata in query:iter_matches(root, bufnr) do
     local line_num = metadata[1].range[1]
@@ -70,15 +74,19 @@ local function get_cells_to_run(direction, buf_nr)
       table.insert(cells_to_run, cell)
     end
   end
+  --
+  -- for _, cell in ipairs(cells_to_run) do
+  --   look_at(cell.range.from)
+  --   look_at(cell.range.to[1])
+  -- end
   return cells_to_run
 end
 
-local function look_at(this)
-  vim.notify(vim.inspect(this))
-end
 local buf_nr = 10
 local lines = get_start_lines(buf_nr)
 local starts = get_all_cells(lines)
+
+local cells = get_cells_to_run("all", buf_nr)
 
 local M = {}
 
@@ -201,10 +209,10 @@ end
 
 M.run_all_cells = function(repl_provider, repl_args, cell_marker)
   local repl = get_repl(repl_provider)
-  local buf_nr = 0
+  local buf_nr = 10
   local cells_to_run = get_cells_to_run("all", buf_nr)
   for _, cell in ipairs(cells_to_run) do
-    repl(cell.range.from, cell.range.to, repl_args, cell_marker)
+    repl(cell.range.from[1], cell.range.to[1], repl_args, cell_marker)
   end
 end
 
@@ -212,7 +220,7 @@ M.run_cells_below = function(cell_marker, repl_provider, repl_args)
   local repl = get_repl(repl_provider)
   local cells_to_run = get_cells_to_run("below", buf_nr)
   for _, cell in ipairs(cells_to_run) do
-    repl(cell.range.from, cell.range.to, repl_args, cell_marker)
+    repl(cell.range.from[1], cell.range.to[1], repl_args, cell_marker)
   end
 end
 
@@ -220,7 +228,7 @@ M.run_cells_above = function(cell_marker, repl_provider, repl_args)
   local repl = get_repl(repl_provider)
   local cells_to_run = get_cells_to_run("above", buf_nr)
   for _, cell in ipairs(cells_to_run) do
-    repl(cell.range.from, cell.range.to, repl_args, cell_marker)
+    repl(cell.range.from[1], cell.range.to[1], repl_args, cell_marker)
   end
 end
 

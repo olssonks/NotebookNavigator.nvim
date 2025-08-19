@@ -80,8 +80,6 @@ local buf_nr = 10
 local lines = get_start_lines(buf_nr)
 local starts = get_all_cells(lines)
 
-look_at(get_cells_to_run("above", 10))
-
 local M = {}
 
 M.move_cell = function(dir, cell_marker)
@@ -206,6 +204,7 @@ M.run_all_cells = function(repl_provider, repl_args, cell_marker)
   local buf_nr = 0
   local cells_to_run = get_cells_to_run("all", buf_nr)
   for _, cell in ipairs(cells_to_run) do
+    look_at(cell)
     repl(cell.range.from, cell.range.to, repl_args, cell_marker)
   end
 end
